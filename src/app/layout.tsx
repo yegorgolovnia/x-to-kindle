@@ -1,12 +1,6 @@
 import type { Metadata } from "next";
-import { Geist_Mono } from "next/font/google";
+import { GeistPixelCircle } from "geist/font/pixel";
 import "./globals.css";
-
-const geistMono = Geist_Mono({
-  subsets: ["latin"],
-  variable: "--font-geist-mono",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "X to Kindle",
@@ -20,7 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${geistMono.variable} font-mono antialiased bg-black text-white selection:bg-white selection:text-black`}>
+      <body className={`${GeistPixelCircle.variable} font-pixel antialiased bg-black text-white selection:bg-white selection:text-black`}>
         {children}
       </body>
     </html>

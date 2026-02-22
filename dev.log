@@ -2,32 +2,12 @@
 > tmp-app@0.1.0 dev
 > next dev
 
-⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
- We detected multiple lockfiles and selected the directory of /Users/egorgolovnia/package-lock.json as the root directory.
- To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
-   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
- Detected additional lockfiles: 
-   * /Users/egorgolovnia/dev/x-to-kindle/package-lock.json
+   ▲ Next.js 15.1.11
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.1.143:3000
 
-▲ Next.js 16.1.6 (Turbopack)
-- Local:         http://localhost:3000
-- Network:       http://192.168.1.143:3000
-
-✓ Starting...
-✓ Ready in 909ms
-Starting Puppeteer for: https://x.com/kloss_xyz/status/2018097344345223455
-Waiting for article DOM...
-(node:91809) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
-(Use `node --trace-deprecation ...` to show where the warning was created)
-Missing RESEND_API_KEY
- POST /api/process 200 in 8.5s (compile: 626ms, render: 7.9s)
-Error: Turbopack build failed with 1 errors:
-./dev/x-to-kindle/src/app
-Error: Next.js inferred your workspace root, but it may not be correct.
-    We couldn't find the Next.js package (next/package.json) from the project directory: /Users/egorgolovnia/dev/x-to-kindle/src/app
-     To fix this, set turbopack.root in your Next.js config, or ensure the Next.js package is resolvable from this directory.
-    Note: For security and performance reasons, files outside of the project directory will not be compiled.
-    See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
-
-    at ignore-listed frames
-[?25h
+ ✓ Starting...
+ ✓ Ready in 1540ms
+ ○ Compiling / ...
+ ✓ Compiled / in 2.2s (663 modules)
+ GET / 200 in 2440ms

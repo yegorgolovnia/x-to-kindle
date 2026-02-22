@@ -64,8 +64,8 @@ export default function Home() {
     <main className="min-h-screen flex flex-col items-center justify-center p-6 sm:p-12">
       <div className="w-full max-w-lg space-y-12">
         <header className="space-y-4 text-center">
-          <h1 className="text-3xl tracking-widest uppercase">X_TO_KINDLE</h1>
-          <p className="text-neutral-500 text-sm tracking-wider">
+          <h1 className="text-3xl tracking-widest uppercase animate-pixel-build">X_TO_KINDLE</h1>
+          <p className="text-neutral-500 text-sm tracking-wider animate-pixel-build">
             RAW TEXT DELIVERY SYSTEM
           </p>
         </header>

@@ -8,11 +8,25 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-mono: var(--font-geist-mono);
+  --font-pixel: var(--font-geist-pixel);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-mono), monospace;
+  font-family: var(--font-pixel), monospace;
+}
+
+@keyframes pixelBuild {
+  0% {
+    font-variation-settings: "FILL" 0;
+  }
+
+  100% {
+    font-variation-settings: "FILL" 1;
+  }
+}
+
+.animate-pixel-build {
+  animation: pixelBuild 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
