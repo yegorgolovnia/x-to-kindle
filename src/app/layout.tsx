@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistPixel = localFont({
-  src: "./fonts/GeistPixel-Regular.woff2",
-  variable: "--font-geist-pixel",
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
   display: "swap",
 });
 
@@ -20,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${geistPixel.variable} font-pixel antialiased bg-black text-white selection:bg-white selection:text-black`}>
+      <body className={`${geistMono.variable} font-mono antialiased bg-black text-white selection:bg-white selection:text-black`}>
         {children}
       </body>
     </html>
