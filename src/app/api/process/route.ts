@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
-import puppeteer from "puppeteer";
+import puppeteer from "puppeteer-core";
+import chromium from "@sparticuz/chromium";
 import Epub from "epub-gen-memory";
+
+export const maxDuration = 60; // Allow Vercel Function up to 60s to execute the scraper
 
 export async function POST(request: Request) {
     try {
@@ -28,15 +31,30 @@ export async function POST(request: Request) {
 
         // 2. Headless Scrape with Custom Headers
         console.log(`Starting Puppeteer for: ${url}`);
+
+        const isLocal = !process.env.VERCEL_REGION;
+
+        let executablePath: string;
+        if (isLocal) {
+            // Default Mac path for local dev testing
+            executablePath = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+        } else {
+            executablePath = await chromium.executablePath();
+        }
+
         const browser = await puppeteer.launch({
+            args: isLocal
+                ? [
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-blink-features=AutomationControlled",
+                    "--disable-features=IsolateOrigins,site-per-process",
+                    "--window-size=1920,1080"
+                ]
+                : [...chromium.args, "--disable-blink-features=AutomationControlled", "--disable-features=IsolateOrigins,site-per-process", "--window-size=1920,1080"],
+            defaultViewport: { width: 1920, height: 1080 },
+            executablePath: executablePath,
             headless: true,
-            args: [
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-blink-features=AutomationControlled",
-                "--disable-features=IsolateOrigins,site-per-process",
-                "--window-size=1920,1080"
-            ],
         });
 
         const page = await browser.newPage();
