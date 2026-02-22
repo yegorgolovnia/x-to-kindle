@@ -88,7 +88,7 @@ export default function Home() {
 
             <div className="text-xs text-neutral-500 space-y-2 leading-relaxed">
               <p>• Go to Amazon &gt; Manage Your Content & Devices &gt; Preferences</p>
-              <p>• Add <span className="text-white">bot@yourdomain.com</span> to the Approved Personal Document E-mail List.</p>
+              <p>• Add <span className="text-white">bot@yegorgolovnia.com</span> to the Approved Personal Document E-mail List.</p>
             </div>
 
             <button
