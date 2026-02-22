@@ -224,31 +224,31 @@ export default function Home() {
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-6 sm:p-12">
-      <div className="w-full max-w-lg space-y-12">
+      <div className="w-full max-w-xl space-y-12">
         <header className="space-y-4 text-center">
-          <h1 className="text-3xl tracking-widest uppercase animate-pixel-build">X_TO_KINDLE</h1>
-          <p className="text-neutral-500 text-sm tracking-wider animate-pixel-build">
+          <h1 className="text-4xl sm:text-5xl tracking-widest uppercase animate-pixel-build">X_TO_KINDLE</h1>
+          <p className="text-neutral-400 text-base sm:text-lg tracking-wider animate-pixel-build animate-pixel-build-delay">
             X / TWITTER ARTICLES TO KINDLE
           </p>
         </header>
 
         {isSettingsOpen ? (
           <section className="border border-neutral-800 p-6 space-y-6 bg-[#050505]">
-            <h2 className="text-xl uppercase tracking-wider">Settings</h2>
+            <h2 className="text-2xl uppercase tracking-wider">Settings</h2>
 
             <div className="space-y-4">
-              <label className="block text-sm text-neutral-400">@KINDLE APP EMAIL</label>
+              <label className="block text-base text-neutral-300">@KINDLE APP EMAIL</label>
               <input
                 type="email"
                 value={kindleEmail}
                 onChange={(e) => setKindleEmail(e.target.value)}
                 placeholder="username@kindle.com"
-                className="w-full bg-transparent border-b border-neutral-700 py-2 focus:outline-none focus:border-white transition-colors"
+                className="w-full bg-transparent border-b border-neutral-700 py-2 text-xl focus:outline-none focus:border-white transition-colors"
                 autoFocus
               />
             </div>
 
-            <div className="text-xs text-neutral-500 space-y-2 leading-relaxed">
+            <div className="text-sm text-neutral-400 space-y-2 leading-relaxed">
               <p>• Go to Amazon &gt; Manage Your Content & Devices &gt; Preferences</p>
               <p>• Add <span className="text-white">kindle@yegorgolovnia.com</span> to the Approved Personal Document E-mail List.</p>
             </div>
@@ -256,7 +256,7 @@ export default function Home() {
             <button
               onClick={handleSaveEmail}
               disabled={!kindleEmail.includes("@kindle.com")}
-              className="w-full py-3 bg-white text-black uppercase tracking-widest hover:bg-neutral-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 bg-white text-black text-base uppercase tracking-widest hover:bg-neutral-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               SAVE CONFIG
             </button>
@@ -265,11 +265,11 @@ export default function Home() {
           <form onSubmit={handleSend} className="space-y-8">
             <div className="space-y-4">
               <div className="flex justify-between items-center gap-4">
-                <label className="block text-sm text-neutral-400 uppercase tracking-widest">
+                <label className="block text-base text-neutral-300 uppercase tracking-widest">
                   {isMultiMode ? "X / TWITTER URLS" : "X / TWITTER URL"}
                 </label>
                 <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-2 text-xs text-neutral-500 uppercase tracking-widest">
+                  <label className="flex items-center gap-2 text-sm text-neutral-400 uppercase tracking-widest">
                     <input
                       type="checkbox"
                       checked={isMultiMode}
@@ -278,13 +278,13 @@ export default function Home() {
                     />
                     MULTI
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => setIsSettingsOpen(true)}
-                    className="text-xs text-neutral-600 hover:text-white transition-colors uppercase tracking-widest"
-                  >
-                    [CONFIG]
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsSettingsOpen(true)}
+                      className="text-sm text-neutral-500 hover:text-white transition-colors uppercase tracking-widest"
+                    >
+                      [CONFIG]
+                    </button>
                 </div>
               </div>
               {isMultiMode ? (
@@ -293,10 +293,10 @@ export default function Home() {
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     placeholder="Paste multiple links (comma, space, or new line separated)"
-                    className="w-full bg-transparent border border-neutral-700 py-3 px-3 text-sm focus:outline-none focus:border-white transition-colors placeholder:text-neutral-700 min-h-28 resize-y"
+                    className="w-full bg-transparent border border-neutral-700 py-3 px-3 text-base focus:outline-none focus:border-white transition-colors placeholder:text-neutral-600 min-h-32 resize-y"
                     required
                   />
-                  <p className="text-xs text-neutral-500 uppercase tracking-widest">
+                  <p className="text-sm text-neutral-400 uppercase tracking-widest">
                     {previewDedup.unique.length} LINKS DETECTED
                     {previewDedup.duplicates > 0
                       ? ` (${previewDedup.duplicates} DUPLICATE${previewDedup.duplicates > 1 ? "S" : ""} WILL BE SKIPPED)`
@@ -309,7 +309,7 @@ export default function Home() {
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   placeholder="https://x.com/username/status/..."
-                  className="w-full bg-transparent border-b border-neutral-700 py-3 text-lg focus:outline-none focus:border-white transition-colors placeholder:text-neutral-800"
+                  className="w-full bg-transparent border-b border-neutral-700 py-3 text-xl focus:outline-none focus:border-white transition-colors placeholder:text-neutral-700"
                   required
                 />
               )}
@@ -318,13 +318,13 @@ export default function Home() {
             <button
               type="submit"
               disabled={status === "loading" || !inputValue.trim()}
-              className="w-full py-4 bg-white text-black uppercase tracking-widest hover:bg-neutral-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
+              className="w-full py-4 bg-white text-black text-base uppercase tracking-widest hover:bg-neutral-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
             >
               {status === "loading" ? "PROCESSING..." : "SEND TO KINDLE"}
             </button>
 
             {message && (
-              <div className={`p-4 border text-center text-sm uppercase tracking-widest ${status === "error" ? "border-red-900 text-red-500" :
+              <div className={`p-4 border text-center text-base uppercase tracking-widest ${status === "error" ? "border-red-900 text-red-500" :
                 status === "success" ? "border-green-900 text-green-500" :
                   "border-neutral-800 text-neutral-400"
                 }`}>
@@ -334,7 +334,7 @@ export default function Home() {
 
             <section className="border border-neutral-800 p-4 bg-[#050505] space-y-4">
               <div className="flex items-center justify-between gap-3">
-                <h3 className="text-sm uppercase tracking-widest text-neutral-300">
+                <h3 className="text-base uppercase tracking-widest text-neutral-200">
                   Send History ({history.length})
                 </h3>
                 <div className="flex items-center gap-2">
@@ -342,7 +342,7 @@ export default function Home() {
                     type="button"
                     onClick={() => exportHistory("json")}
                     disabled={!history.length}
-                    className="px-2 py-1 border border-neutral-700 text-[10px] uppercase tracking-widest text-neutral-400 hover:text-white hover:border-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="px-2 py-1 border border-neutral-700 text-xs uppercase tracking-widest text-neutral-400 hover:text-white hover:border-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Export JSON
                   </button>
@@ -350,7 +350,7 @@ export default function Home() {
                     type="button"
                     onClick={() => exportHistory("csv")}
                     disabled={!history.length}
-                    className="px-2 py-1 border border-neutral-700 text-[10px] uppercase tracking-widest text-neutral-400 hover:text-white hover:border-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="px-2 py-1 border border-neutral-700 text-xs uppercase tracking-widest text-neutral-400 hover:text-white hover:border-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Export CSV
                   </button>
@@ -358,13 +358,13 @@ export default function Home() {
               </div>
 
               {!history.length ? (
-                <p className="text-xs text-neutral-600 uppercase tracking-widest">No articles sent yet.</p>
+                <p className="text-sm text-neutral-500 uppercase tracking-widest">No articles sent yet.</p>
               ) : (
                 <div className="max-h-56 overflow-y-auto space-y-2">
                   {history.map((item) => (
                     <div
                       key={item.id}
-                      className="border border-neutral-900 p-2 text-xs space-y-1"
+                      className="border border-neutral-900 p-2 text-sm space-y-1"
                     >
                       <p className={`uppercase tracking-widest ${item.status === "success" ? "text-green-500" : "text-red-500"}`}>
                         {item.status}
@@ -379,6 +379,42 @@ export default function Home() {
             </section>
           </form>
         )}
+
+        <footer className="border-t border-neutral-900 pt-4 text-sm uppercase tracking-widest text-neutral-500 space-y-2">
+          <p>
+            built by:{" "}
+            <a
+              href="https://yegorgolovnia.com"
+              target="_blank"
+              rel="noreferrer"
+              className="text-neutral-400 hover:text-white transition-colors"
+            >
+              yegorgolovnia.com
+            </a>
+          </p>
+          <p>
+            my x:{" "}
+            <a
+              href="https://x.com/yegorgolovnia"
+              target="_blank"
+              rel="noreferrer"
+              className="text-neutral-400 hover:text-white transition-colors"
+            >
+              x.com/yegorgolovnia
+            </a>
+          </p>
+          <p>
+            github:{" "}
+            <a
+              href="https://github.com/yegorgolovnia"
+              target="_blank"
+              rel="noreferrer"
+              className="text-neutral-400 hover:text-white transition-colors"
+            >
+              github.com/yegorgolovnia
+            </a>
+          </p>
+        </footer>
       </div>
     </main>
   );

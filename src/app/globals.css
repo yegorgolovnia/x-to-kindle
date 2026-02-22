@@ -17,16 +17,53 @@ body {
   font-family: var(--font-pixel), monospace;
 }
 
-@keyframes pixelBuild {
+@keyframes pixelBuildReveal {
   0% {
-    font-variation-settings: "FILL" 0;
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+    filter: blur(1.25px);
   }
 
   100% {
-    font-variation-settings: "FILL" 1;
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+    filter: blur(0);
+  }
+}
+
+@keyframes pixelBuildGlow {
+  0% {
+    text-shadow: 0 0 0 rgba(255, 255, 255, 0);
+  }
+
+  50% {
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
+  }
+
+  100% {
+    text-shadow: 0 0 0 rgba(255, 255, 255, 0);
   }
 }
 
 .animate-pixel-build {
-  animation: pixelBuild 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  display: inline-block;
+  white-space: nowrap;
+  opacity: 0;
+  clip-path: inset(0 100% 0 0);
+  animation: pixelBuildReveal 1.05s steps(18, end) forwards, pixelBuildGlow 1.05s steps(2, end) forwards;
+}
+
+.animate-pixel-build-delay {
+  animation-delay: 0.18s, 0.18s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pixel-build,
+  .animate-pixel-build-delay {
+    animation: none;
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+    filter: none;
+    text-shadow: none;
+  }
 }
