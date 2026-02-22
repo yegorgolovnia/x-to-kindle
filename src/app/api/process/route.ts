@@ -5,7 +5,45 @@ import Epub from "epub-gen-memory";
 
 export const maxDuration = 60; // Allow Vercel Function up to 60s to execute the scraper
 
+function isAllowedXHostname(hostname: string): boolean {
+    const normalizedHost = hostname.toLowerCase();
+    return (
+        normalizedHost === "x.com" ||
+        normalizedHost.endsWith(".x.com") ||
+        normalizedHost === "twitter.com" ||
+        normalizedHost.endsWith(".twitter.com")
+    );
+}
+
+function escapeHtml(input: string): string {
+    return input
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+}
+
+function deriveEpubTitle(text: string, author: string): string {
+    const firstMeaningfulLine = text
+        .split(/\n+/)
+        .map((line) => line.trim())
+        .find((line) => line.length > 0);
+
+    if (!firstMeaningfulLine) {
+        return `X Article by ${author}`;
+    }
+
+    const normalized = firstMeaningfulLine.replace(/\s+/g, " ");
+    const maxLength = 80;
+    if (normalized.length <= maxLength) {
+        return normalized;
+    }
+
+    return `${normalized.slice(0, maxLength - 3).trimEnd()}...`;
+}
+
 export async function POST(request: Request) {
+    let browser: Awaited<ReturnType<typeof puppeteer.launch>> | null = null;
+
     try {
         const { url, kindleEmail } = await request.json();
 
@@ -18,8 +56,8 @@ export async function POST(request: Request) {
 
         // 1. Validate URL
         try {
-            new URL(url);
-            if (!url.includes("x.com") && !url.includes("twitter.com")) {
+            const parsedUrl = new URL(url);
+            if (!isAllowedXHostname(parsedUrl.hostname)) {
                 throw new Error();
             }
         } catch {
@@ -42,7 +80,7 @@ export async function POST(request: Request) {
             executablePath = await chromium.executablePath();
         }
 
-        const browser = await puppeteer.launch({
+        browser = await puppeteer.launch({
             args: isLocal
                 ? [
                     "--no-sandbox",
@@ -78,7 +116,6 @@ export async function POST(request: Request) {
             const rawHtml = await page.content();
             console.log("DOM Dump (failed to find article):", rawHtml.substring(0, 500));
 
-            await browser.close();
             return NextResponse.json(
                 { error: "Could not find article content. It might be private or deleted." },
                 { status: 404 }
@@ -118,8 +155,6 @@ export async function POST(request: Request) {
             };
         });
 
-        await browser.close();
-
         if (!text) {
             console.log("Extraction failed. Article HTML Dump (first 2000 chars):");
             console.log(debugHtml ? debugHtml.substring(0, 2000) : "No HTML returned.");
@@ -131,17 +166,20 @@ export async function POST(request: Request) {
         }
 
         // 3. Generate EPUB in memory
+        const safeAuthor = author?.trim() || "Unknown Author";
+        const epubTitle = deriveEpubTitle(text, safeAuthor);
+        const escapedText = escapeHtml(text);
+
         const epubContent = [{
-            title: "Article Content",
-            content: `<p>${text.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br/>')}</p>`
+            title: epubTitle,
+            content: `<p>${escapedText.replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br/>")}</p>`
         }];
 
         const epubBuffer = await Epub(
             {
-                title: `X Article by ${author}`,
-                author: author,
+                title: epubTitle,
+                author: safeAuthor,
                 publisher: "x-to-kindle",
-                cover: "https://abs.twimg.com/icons/apple-touch-icon-192x192.png",
             },
             epubContent
         );
@@ -152,7 +190,7 @@ export async function POST(request: Request) {
             // Don't crash entirely here just in case they're testing extraction locally
             return NextResponse.json({
                 message: "⚠️ Successfully generated EPUB. Resend API missing in .env, skipping delivery.",
-                author: author,
+                author: safeAuthor,
                 textPreview: text.substring(0, 100) + "..."
             });
         }
@@ -166,11 +204,11 @@ export async function POST(request: Request) {
             body: JSON.stringify({
                 from: "X-to-Kindle <kindle@yegorgolovnia.com>",
                 to: [kindleEmail],
-                subject: `X Article from ${author}`,
+                subject: `X Article from ${safeAuthor}`,
                 html: "<p>Your requested X Article</p>",
                 attachments: [
                     {
-                        filename: `Article_by_${author.replace(/[^a-zA-Z0-9]/g, "_")}.epub`,
+                        filename: `Article_by_${safeAuthor.replace(/[^a-zA-Z0-9]/g, "_")}.epub`,
                         content: Buffer.from(epubBuffer).toString('base64'),
                     }
                 ]
@@ -188,7 +226,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({
             message: "Successfully delivered to Kindle",
-            author: author,
+            author: safeAuthor,
             textPreview: text.substring(0, 100) + "..."
         });
 
@@ -198,5 +236,11 @@ export async function POST(request: Request) {
             { error: "An unexpected error occurred: " + (error instanceof Error ? error.message : "Unknown error") },
             { status: 500 }
         );
+    } finally {
+        if (browser) {
+            await browser.close().catch((closeError: unknown) => {
+                console.error("Error closing Puppeteer browser:", closeError);
+            });
+        }
     }
 }

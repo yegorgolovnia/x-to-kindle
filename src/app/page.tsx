@@ -2,26 +2,131 @@
 
 import { useState, useEffect } from "react";
 
+type SendStatus = "success" | "error";
+
+type HistoryItem = {
+  id: string;
+  timestamp: string;
+  url: string;
+  status: SendStatus;
+  author: string;
+  detail: string;
+};
+
+const HISTORY_STORAGE_KEY = "xToKindleHistory";
+const HISTORY_LIMIT = 300;
+
 export default function Home() {
   const [kindleEmail, setKindleEmail] = useState("");
-  const [xUrl, setXUrl] = useState("");
+  const [inputValue, setInputValue] = useState("");
+  const [isMultiMode, setIsMultiMode] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
+  const [history, setHistory] = useState<HistoryItem[]>([]);
 
   useEffect(() => {
     const savedEmail = localStorage.getItem("kindleEmail");
+    const savedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
+
     if (savedEmail) {
       setKindleEmail(savedEmail);
     } else {
       setIsSettingsOpen(true);
     }
+
+    if (savedHistory) {
+      try {
+        const parsed = JSON.parse(savedHistory) as HistoryItem[];
+        if (Array.isArray(parsed)) {
+          setHistory(parsed);
+        }
+      } catch (error) {
+        console.error("Failed to parse saved history", error);
+      }
+    }
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
+  }, [history]);
 
   const handleSaveEmail = () => {
     localStorage.setItem("kindleEmail", kindleEmail);
     setIsSettingsOpen(false);
   };
+
+  const normalizeUrlForDedup = (value: string): string => {
+    try {
+      const parsed = new URL(value.trim());
+      parsed.hash = "";
+      parsed.searchParams.sort();
+      return parsed.toString();
+    } catch {
+      return value.trim().toLowerCase();
+    }
+  };
+
+  const parseUrls = (rawInput: string): string[] =>
+    rawInput
+      .split(/[\n,\s]+/)
+      .map((url) => url.trim())
+      .filter(Boolean);
+
+  const dedupeUrls = (urls: string[]) => {
+    const seen = new Set<string>();
+    const unique: string[] = [];
+    let duplicates = 0;
+
+    for (const url of urls) {
+      const normalized = normalizeUrlForDedup(url);
+      if (seen.has(normalized)) {
+        duplicates += 1;
+        continue;
+      }
+
+      seen.add(normalized);
+      unique.push(url);
+    }
+
+    return { unique, duplicates };
+  };
+
+  const exportHistory = (format: "json" | "csv") => {
+    if (!history.length) return;
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const filename = `x-to-kindle-history-${timestamp}.${format}`;
+
+    let content = "";
+    let mimeType = "";
+
+    if (format === "json") {
+      content = JSON.stringify(history, null, 2);
+      mimeType = "application/json";
+    } else {
+      const csvEscape = (value: string) => `"${value.replace(/"/g, '""')}"`;
+      const rows = [
+        ["timestamp", "status", "url", "author", "detail"],
+        ...history.map((item) => [item.timestamp, item.status, item.url, item.author, item.detail]),
+      ];
+      content = rows.map((row) => row.map((cell) => csvEscape(cell)).join(",")).join("\n");
+      mimeType = "text/csv;charset=utf-8";
+    }
+
+    const blob = new Blob([content], { type: mimeType });
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(downloadUrl);
+  };
+
+  const rawParsedUrls = parseUrls(inputValue);
+  const previewDedup = dedupeUrls(rawParsedUrls);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,24 +135,81 @@ export default function Home() {
       return;
     }
 
+    const rawUrls = isMultiMode ? parseUrls(inputValue) : [inputValue.trim()];
+    const { unique: urls, duplicates } = dedupeUrls(rawUrls);
+    const duplicateNote =
+      isMultiMode && duplicates > 0 ? ` (${duplicates} DUPLICATE${duplicates > 1 ? "S" : ""} SKIPPED)` : "";
+
+    if (!urls.length || !urls[0]) {
+      setStatus("error");
+      setMessage("ERROR: Please provide at least one X/Twitter URL.");
+      return;
+    }
+
     setStatus("loading");
-    setMessage("FETCHING ARTICLE [___]");
+    setMessage(isMultiMode ? `FETCHING ${urls.length} ARTICLES [___]${duplicateNote}` : "FETCHING ARTICLE [___]");
 
     try {
-      const res = await fetch("/api/process", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: xUrl, kindleEmail }),
-      });
+      const successes: string[] = [];
+      const failures: string[] = [];
+      const historyEntries: HistoryItem[] = [];
 
-      const data = await res.json();
+      for (const url of urls) {
+        const res = await fetch("/api/process", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url, kindleEmail }),
+        });
 
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to process the article.");
+        const data = await res.json();
+
+        if (!res.ok) {
+          failures.push(`${url} (${data.error || "Failed to process the article."})`);
+          historyEntries.push({
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+            timestamp: new Date().toISOString(),
+            url,
+            status: "error",
+            author: "N/A",
+            detail: data.error || "Failed to process the article.",
+          });
+          continue;
+        }
+
+        const author = data.author || "Unknown Author";
+        successes.push(author);
+        historyEntries.push({
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+          timestamp: new Date().toISOString(),
+          url,
+          status: "success",
+          author,
+          detail: data.textPreview || "Delivered to Kindle",
+        });
       }
 
-      setStatus("success");
-      setMessage(`FETCHED: ${data.author} - ${data.textPreview}`);
+      if (historyEntries.length > 0) {
+        setHistory((prev) => [...historyEntries.reverse(), ...prev].slice(0, HISTORY_LIMIT));
+      }
+
+      if (!failures.length) {
+        setStatus("success");
+        setMessage(
+          isMultiMode
+            ? `FETCHED ${successes.length}/${urls.length} ARTICLES SUCCESSFULLY.${duplicateNote}`
+            : `FETCHED: ${successes[0]}`
+        );
+        return;
+      }
+
+      if (!successes.length) {
+        setStatus("error");
+        setMessage(`ERROR: Failed to process ${failures.length} URL(s).${duplicateNote}`);
+        return;
+      }
+
+      setStatus("error");
+      setMessage(`PARTIAL: ${successes.length} SENT, ${failures.length} FAILED.${duplicateNote}`);
 
     } catch (err: unknown) {
       console.error(err);
@@ -66,7 +228,7 @@ export default function Home() {
         <header className="space-y-4 text-center">
           <h1 className="text-3xl tracking-widest uppercase animate-pixel-build">X_TO_KINDLE</h1>
           <p className="text-neutral-500 text-sm tracking-wider animate-pixel-build">
-            RAW TEXT DELIVERY SYSTEM
+            X / TWITTER ARTICLES TO KINDLE
           </p>
         </header>
 
@@ -102,29 +264,60 @@ export default function Home() {
         ) : (
           <form onSubmit={handleSend} className="space-y-8">
             <div className="space-y-4">
-              <div className="flex justify-between items-baseline">
-                <label className="block text-sm text-neutral-400 uppercase tracking-widest">X / TWITTER URL</label>
-                <button
-                  type="button"
-                  onClick={() => setIsSettingsOpen(true)}
-                  className="text-xs text-neutral-600 hover:text-white transition-colors uppercase tracking-widest"
-                >
-                  [CONFIG]
-                </button>
+              <div className="flex justify-between items-center gap-4">
+                <label className="block text-sm text-neutral-400 uppercase tracking-widest">
+                  {isMultiMode ? "X / TWITTER URLS" : "X / TWITTER URL"}
+                </label>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 text-xs text-neutral-500 uppercase tracking-widest">
+                    <input
+                      type="checkbox"
+                      checked={isMultiMode}
+                      onChange={(e) => setIsMultiMode(e.target.checked)}
+                      className="h-3 w-3 accent-white"
+                    />
+                    MULTI
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsSettingsOpen(true)}
+                    className="text-xs text-neutral-600 hover:text-white transition-colors uppercase tracking-widest"
+                  >
+                    [CONFIG]
+                  </button>
+                </div>
               </div>
-              <input
-                type="url"
-                value={xUrl}
-                onChange={(e) => setXUrl(e.target.value)}
-                placeholder="https://x.com/username/status/..."
-                className="w-full bg-transparent border-b border-neutral-700 py-3 text-lg focus:outline-none focus:border-white transition-colors placeholder:text-neutral-800"
-                required
-              />
+              {isMultiMode ? (
+                <div className="space-y-2">
+                  <textarea
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    placeholder="Paste multiple links (comma, space, or new line separated)"
+                    className="w-full bg-transparent border border-neutral-700 py-3 px-3 text-sm focus:outline-none focus:border-white transition-colors placeholder:text-neutral-700 min-h-28 resize-y"
+                    required
+                  />
+                  <p className="text-xs text-neutral-500 uppercase tracking-widest">
+                    {previewDedup.unique.length} LINKS DETECTED
+                    {previewDedup.duplicates > 0
+                      ? ` (${previewDedup.duplicates} DUPLICATE${previewDedup.duplicates > 1 ? "S" : ""} WILL BE SKIPPED)`
+                      : ""}
+                  </p>
+                </div>
+              ) : (
+                <input
+                  type="url"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  placeholder="https://x.com/username/status/..."
+                  className="w-full bg-transparent border-b border-neutral-700 py-3 text-lg focus:outline-none focus:border-white transition-colors placeholder:text-neutral-800"
+                  required
+                />
+              )}
             </div>
 
             <button
               type="submit"
-              disabled={status === "loading" || !xUrl}
+              disabled={status === "loading" || !inputValue.trim()}
               className="w-full py-4 bg-white text-black uppercase tracking-widest hover:bg-neutral-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
             >
               {status === "loading" ? "PROCESSING..." : "SEND TO KINDLE"}
@@ -138,6 +331,52 @@ export default function Home() {
                 {message}
               </div>
             )}
+
+            <section className="border border-neutral-800 p-4 bg-[#050505] space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-sm uppercase tracking-widest text-neutral-300">
+                  Send History ({history.length})
+                </h3>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => exportHistory("json")}
+                    disabled={!history.length}
+                    className="px-2 py-1 border border-neutral-700 text-[10px] uppercase tracking-widest text-neutral-400 hover:text-white hover:border-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Export JSON
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => exportHistory("csv")}
+                    disabled={!history.length}
+                    className="px-2 py-1 border border-neutral-700 text-[10px] uppercase tracking-widest text-neutral-400 hover:text-white hover:border-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Export CSV
+                  </button>
+                </div>
+              </div>
+
+              {!history.length ? (
+                <p className="text-xs text-neutral-600 uppercase tracking-widest">No articles sent yet.</p>
+              ) : (
+                <div className="max-h-56 overflow-y-auto space-y-2">
+                  {history.map((item) => (
+                    <div
+                      key={item.id}
+                      className="border border-neutral-900 p-2 text-xs space-y-1"
+                    >
+                      <p className={`uppercase tracking-widest ${item.status === "success" ? "text-green-500" : "text-red-500"}`}>
+                        {item.status}
+                      </p>
+                      <p className="text-neutral-300 break-all">{item.url}</p>
+                      <p className="text-neutral-500">{item.author}</p>
+                      <p className="text-neutral-600">{new Date(item.timestamp).toLocaleString()}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
           </form>
         )}
       </div>

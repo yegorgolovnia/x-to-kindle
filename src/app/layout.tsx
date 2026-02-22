@@ -14,7 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${GeistPixelCircle.variable} font-pixel antialiased bg-black text-white selection:bg-white selection:text-black`}>
+      <body className={`${GeistPixelCircle.variable} ${GeistPixelCircle.className} font-pixel antialiased bg-black text-white selection:bg-white selection:text-black`}>
         {children}
       </body>
     </html>

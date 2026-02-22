@@ -8,7 +8,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-pixel: var(--font-geist-pixel);
+  --font-pixel: var(--font-geist-pixel-circle);
 }
 
 body {
