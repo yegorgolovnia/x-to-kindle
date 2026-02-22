@@ -1,65 +1,142 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useEffect } from "react";
 
 export default function Home() {
+  const [kindleEmail, setKindleEmail] = useState("");
+  const [xUrl, setXUrl] = useState("");
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    const savedEmail = localStorage.getItem("kindleEmail");
+    if (savedEmail) {
+      setKindleEmail(savedEmail);
+    } else {
+      setIsSettingsOpen(true);
+    }
+  }, []);
+
+  const handleSaveEmail = () => {
+    localStorage.setItem("kindleEmail", kindleEmail);
+    setIsSettingsOpen(false);
+  };
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!kindleEmail) {
+      setIsSettingsOpen(true);
+      return;
+    }
+
+    setStatus("loading");
+    setMessage("FETCHING ARTICLE [___]");
+
+    try {
+      const res = await fetch("/api/process", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: xUrl, kindleEmail }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to process the article.");
+      }
+
+      setStatus("success");
+      setMessage(`FETCHED: ${data.author} - ${data.textPreview}`);
+
+    } catch (err: any) {
+      console.error(err);
+      setStatus("error");
+      setMessage(`ERROR: ${err.message}`);
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="min-h-screen flex flex-col items-center justify-center p-6 sm:p-12">
+      <div className="w-full max-w-lg space-y-12">
+        <header className="space-y-4 text-center">
+          <h1 className="text-3xl tracking-widest uppercase">X_TO_KINDLE</h1>
+          <p className="text-neutral-500 text-sm tracking-wider">
+            RAW TEXT DELIVERY SYSTEM
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+        </header>
+
+        {isSettingsOpen ? (
+          <section className="border border-neutral-800 p-6 space-y-6 bg-[#050505]">
+            <h2 className="text-xl uppercase tracking-wider">Settings</h2>
+
+            <div className="space-y-4">
+              <label className="block text-sm text-neutral-400">@KINDLE APP EMAIL</label>
+              <input
+                type="email"
+                value={kindleEmail}
+                onChange={(e) => setKindleEmail(e.target.value)}
+                placeholder="username@kindle.com"
+                className="w-full bg-transparent border-b border-neutral-700 py-2 focus:outline-none focus:border-white transition-colors"
+                autoFocus
+              />
+            </div>
+
+            <div className="text-xs text-neutral-500 space-y-2 leading-relaxed">
+              <p>• Go to Amazon &gt; Manage Your Content & Devices &gt; Preferences</p>
+              <p>• Add <span className="text-white">bot@yourdomain.com</span> to the Approved Personal Document E-mail List.</p>
+            </div>
+
+            <button
+              onClick={handleSaveEmail}
+              disabled={!kindleEmail.includes("@kindle.com")}
+              className="w-full py-3 bg-white text-black uppercase tracking-widest hover:bg-neutral-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              SAVE CONFIG
+            </button>
+          </section>
+        ) : (
+          <form onSubmit={handleSend} className="space-y-8">
+            <div className="space-y-4">
+              <div className="flex justify-between items-baseline">
+                <label className="block text-sm text-neutral-400 uppercase tracking-widest">X / TWITTER URL</label>
+                <button
+                  type="button"
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="text-xs text-neutral-600 hover:text-white transition-colors uppercase tracking-widest"
+                >
+                  [CONFIG]
+                </button>
+              </div>
+              <input
+                type="url"
+                value={xUrl}
+                onChange={(e) => setXUrl(e.target.value)}
+                placeholder="https://x.com/username/status/..."
+                className="w-full bg-transparent border-b border-neutral-700 py-3 text-lg focus:outline-none focus:border-white transition-colors placeholder:text-neutral-800"
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={status === "loading" || !xUrl}
+              className="w-full py-4 bg-white text-black uppercase tracking-widest hover:bg-neutral-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
+            >
+              {status === "loading" ? "PROCESSING..." : "SEND TO KINDLE"}
+            </button>
+
+            {message && (
+              <div className={`p-4 border text-center text-sm uppercase tracking-widest ${status === "error" ? "border-red-900 text-red-500" :
+                status === "success" ? "border-green-900 text-green-500" :
+                  "border-neutral-800 text-neutral-400"
+                }`}>
+                {message}
+              </div>
+            )}
+          </form>
+        )}
+      </div>
+    </main>
   );
 }

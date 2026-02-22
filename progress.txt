@@ -1,0 +1,6 @@
+[ ] Phase 1: Initialization & Tooling
+[ ] Phase 2: Frontend Layout & State
+[ ] Phase 3: Extraction API (Backend)
+[ ] Phase 4: EPUB Generation (Backend)
+[ ] Phase 5: Resend Delivery (Backend)
+[ ] Phase 6: Testing & Polish

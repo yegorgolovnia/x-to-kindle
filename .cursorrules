@@ -1,0 +1,14 @@
+# .cursorrules
+
+## Project Identity
+- **Name**: X Article to Kindle
+- **Goal**: Convert X long-form posts (Articles) to EPUB and email them to a Kindle via Resend.
+- **Keywords**: Minimalist, Serverless, Stateless, Dark Mode.
+
+## Core Directives
+1. **Keep it Simple**: No databases, no auth, no heavy ORMs. Rely on browser `localStorage` for the Kindle email.
+2. **Design**: STRICTLY dark mode. Use the `Geist Pixel` font for a sharp, technical, retro-terminal aesthetic. 
+3. **Architecture**: Next.js App Router. Use serverless API routes (`/api/...`) to handle the heavy lifting (fetching, EPUB generation, emailing).
+4. **Resilience**: Assume the Twitter API wrapper might fail. Return clean, user-facing error messages instead of stack traces.
+5. **Memory Management**: Generate the EPUB entirely in-memory using Buffers. Do not write temporary files to the disk/filesystem, as serverless environments (like Vercel) have ephemeral, read-only filesystems.
+6. **Feature Lock**: Do NOT build thread unrolling. Do NOT handle video. Only handle text and static images from X Articles.
