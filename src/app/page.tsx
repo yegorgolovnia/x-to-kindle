@@ -49,10 +49,14 @@ export default function Home() {
       setStatus("success");
       setMessage(`FETCHED: ${data.author} - ${data.textPreview}`);
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       setStatus("error");
-      setMessage(`ERROR: ${err.message}`);
+      if (err instanceof Error) {
+        setMessage(`ERROR: ${err.message}`);
+      } else {
+        setMessage("ERROR: An unknown error occurred.");
+      }
     }
   };
 

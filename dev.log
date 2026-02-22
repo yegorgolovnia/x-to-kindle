@@ -14,13 +14,10 @@
 - Network:       http://192.168.1.143:3000
 
 ✓ Starting...
-Attention: Next.js now collects completely anonymous telemetry regarding usage.
-This information is used to shape Next.js' roadmap and prioritize features.
-You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
-https://nextjs.org/telemetry
-
-✓ Ready in 3.3s
-Fetching from: https://api.vxtwitter.com/Twitter/status/2018097344345223455
- POST /api/process 200 in 1207ms (compile: 465ms, render: 742ms)
+✓ Ready in 909ms
 Starting Puppeteer for: https://x.com/kloss_xyz/status/2018097344345223455
- POST /api/process 500 in 36.4s (compile: 673ms, render: 35.7s)
+Waiting for article DOM...
+(node:91809) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Missing RESEND_API_KEY
+ POST /api/process 200 in 8.5s (compile: 626ms, render: 7.9s)
