@@ -125,8 +125,26 @@ export default function Home() {
     URL.revokeObjectURL(downloadUrl);
   };
 
+  const clearHistory = () => {
+    if (!history.length) return;
+
+    const shouldClear = window.confirm("Clear sent history? This will allow previously sent links to be sent again.");
+    if (!shouldClear) return;
+
+    setHistory([]);
+    localStorage.removeItem(HISTORY_STORAGE_KEY);
+    setStatus("success");
+    setMessage("HISTORY CLEARED. PREVIOUS LINKS CAN NOW BE RESENT.");
+  };
+
   const rawParsedUrls = parseUrls(inputValue);
   const previewDedup = dedupeUrls(rawParsedUrls);
+  const sentUrlSet = new Set(
+    history
+      .filter((item) => item.status === "success")
+      .map((item) => normalizeUrlForDedup(item.url))
+  );
+  const previewAlreadySent = previewDedup.unique.filter((url) => sentUrlSet.has(normalizeUrlForDedup(url))).length;
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,24 +155,42 @@ export default function Home() {
 
     const rawUrls = isMultiMode ? parseUrls(inputValue) : [inputValue.trim()];
     const { unique: urls, duplicates } = dedupeUrls(rawUrls);
-    const duplicateNote =
-      isMultiMode && duplicates > 0 ? ` (${duplicates} DUPLICATE${duplicates > 1 ? "S" : ""} SKIPPED)` : "";
+    const urlsToProcess = urls.filter((url) => !sentUrlSet.has(normalizeUrlForDedup(url)));
+    const alreadySentCount = urls.length - urlsToProcess.length;
+    const notes: string[] = [];
+    if (duplicates > 0) {
+      notes.push(`${duplicates} DUPLICATE${duplicates > 1 ? "S" : ""} SKIPPED`);
+    }
+    if (alreadySentCount > 0) {
+      notes.push(`${alreadySentCount} ALREADY SENT SKIPPED`);
+    }
+    const statusNote = notes.length ? ` (${notes.join(", ")})` : "";
 
-    if (!urls.length || !urls[0]) {
+    if (!urls.length) {
       setStatus("error");
       setMessage("ERROR: Please provide at least one X/Twitter URL.");
       return;
     }
 
+    if (!urlsToProcess.length) {
+      setStatus("success");
+      setMessage(`SKIPPED: ALL LINKS WERE ALREADY SENT.${statusNote} CLEAR HISTORY TO RESEND.`);
+      return;
+    }
+
     setStatus("loading");
-    setMessage(isMultiMode ? `FETCHING ${urls.length} ARTICLES [___]${duplicateNote}` : "FETCHING ARTICLE [___]");
+    setMessage(
+      isMultiMode
+        ? `FETCHING ${urlsToProcess.length} ARTICLES [___]${statusNote}`
+        : `FETCHING ARTICLE [___]${statusNote}`
+    );
 
     try {
       const successes: string[] = [];
       const failures: string[] = [];
       const historyEntries: HistoryItem[] = [];
 
-      for (const url of urls) {
+      for (const url of urlsToProcess) {
         const res = await fetch("/api/process", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -177,14 +213,15 @@ export default function Home() {
         }
 
         const author = data.author || "Unknown Author";
-        successes.push(author);
+        const articleTitle = data.title || author || "Untitled Article";
+        successes.push(articleTitle);
         historyEntries.push({
           id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
           timestamp: new Date().toISOString(),
           url,
           status: "success",
           author,
-          detail: data.textPreview || "Delivered to Kindle",
+          detail: articleTitle,
         });
       }
 
@@ -196,7 +233,7 @@ export default function Home() {
         setStatus("success");
         setMessage(
           isMultiMode
-            ? `FETCHED ${successes.length}/${urls.length} ARTICLES SUCCESSFULLY.${duplicateNote}`
+            ? `FETCHED ${successes.length}/${urlsToProcess.length} ARTICLES SUCCESSFULLY.${statusNote}`
             : `FETCHED: ${successes[0]}`
         );
         return;
@@ -204,12 +241,12 @@ export default function Home() {
 
       if (!successes.length) {
         setStatus("error");
-        setMessage(`ERROR: Failed to process ${failures.length} URL(s).${duplicateNote}`);
+        setMessage(`ERROR: Failed to process ${failures.length} URL(s).${statusNote}`);
         return;
       }
 
       setStatus("error");
-      setMessage(`PARTIAL: ${successes.length} SENT, ${failures.length} FAILED.${duplicateNote}`);
+      setMessage(`PARTIAL: ${successes.length} SENT, ${failures.length} FAILED.${statusNote}`);
 
     } catch (err: unknown) {
       console.error(err);
@@ -301,6 +338,9 @@ export default function Home() {
                     {previewDedup.duplicates > 0
                       ? ` (${previewDedup.duplicates} DUPLICATE${previewDedup.duplicates > 1 ? "S" : ""} WILL BE SKIPPED)`
                       : ""}
+                    {previewAlreadySent > 0
+                      ? ` (${previewAlreadySent} ALREADY SENT${previewAlreadySent > 1 ? " LINKS" : " LINK"} WILL BE SKIPPED)`
+                      : ""}
                   </p>
                 </div>
               ) : (
@@ -353,6 +393,14 @@ export default function Home() {
                     className="px-2 py-1 border border-neutral-700 text-xs uppercase tracking-widest text-neutral-400 hover:text-white hover:border-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Export CSV
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearHistory}
+                    disabled={!history.length}
+                    className="px-2 py-1 border border-red-900 text-xs uppercase tracking-widest text-red-500 hover:text-red-300 hover:border-red-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Clear History
                   </button>
                 </div>
               </div>

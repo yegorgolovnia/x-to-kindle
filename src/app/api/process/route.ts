@@ -22,7 +22,17 @@ function escapeHtml(input: string): string {
         .replace(/>/g, "&gt;");
 }
 
-function deriveEpubTitle(text: string, author: string): string {
+function deriveEpubTitle(text: string, author: string, extractedTitle?: string | null): string {
+    const normalizedExtractedTitle = extractedTitle?.replace(/\s+/g, " ").trim();
+    if (normalizedExtractedTitle && normalizedExtractedTitle.length > 2) {
+        const titleMaxLength = 120;
+        if (normalizedExtractedTitle.length <= titleMaxLength) {
+            return normalizedExtractedTitle;
+        }
+
+        return `${normalizedExtractedTitle.slice(0, titleMaxLength - 3).trimEnd()}...`;
+    }
+
     const firstMeaningfulLine = text
         .split(/\n+/)
         .map((line) => line.trim())
@@ -39,6 +49,21 @@ function deriveEpubTitle(text: string, author: string): string {
     }
 
     return `${normalized.slice(0, maxLength - 3).trimEnd()}...`;
+}
+
+function deriveAttachmentFilename(title: string): string {
+    const sanitizedTitle = title
+        .replace(/[\\/:*?"<>|]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const baseTitle = sanitizedTitle || "X Article";
+    const maxLength = 110;
+    const trimmedTitle = baseTitle.length <= maxLength
+        ? baseTitle
+        : `${baseTitle.slice(0, maxLength - 3).trimEnd()}...`;
+
+    return `${trimmedTitle}.epub`;
 }
 
 export async function POST(request: Request) {
@@ -122,11 +147,20 @@ export async function POST(request: Request) {
             );
         }
 
-        const { text, author, debugHtml } = await page.evaluate(() => {
+        const { text, author, articleTitle, debugHtml } = await page.evaluate(() => {
             const articles = Array.from(document.querySelectorAll('article'));
-            if (!articles.length) return { text: null, author: null, debugHtml: null };
+            if (!articles.length) return { text: null, author: null, articleTitle: null, debugHtml: null };
 
             const mainArticle = articles[0];
+            const titleCandidates = [
+                mainArticle.querySelector('[data-testid="articleTitle"]'),
+                mainArticle.querySelector('h1'),
+                mainArticle.querySelector('header h1'),
+                document.querySelector('article h1')
+            ];
+            const extractedTitle = titleCandidates
+                .map((node) => node?.textContent?.trim() || "")
+                .find((candidate) => candidate.length > 0) || null;
 
             // X Articles use different data-testids or deeply nested spans compared to normal tweets.
             // Let's grab every text-containing node that is buried deep in the tree and isn't UI fluff.
@@ -151,6 +185,7 @@ export async function POST(request: Request) {
             return {
                 text: fullText,
                 author: mainArticle.querySelector('[data-testid="User-Name"]')?.textContent?.split('@')[0] || "Unknown Author",
+                articleTitle: extractedTitle,
                 debugHtml: mainArticle.innerHTML
             };
         });
@@ -167,7 +202,8 @@ export async function POST(request: Request) {
 
         // 3. Generate EPUB in memory
         const safeAuthor = author?.trim() || "Unknown Author";
-        const epubTitle = deriveEpubTitle(text, safeAuthor);
+        const epubTitle = deriveEpubTitle(text, safeAuthor, articleTitle);
+        const attachmentFilename = deriveAttachmentFilename(epubTitle);
         const escapedText = escapeHtml(text);
 
         const epubContent = [{
@@ -191,6 +227,7 @@ export async function POST(request: Request) {
             return NextResponse.json({
                 message: "⚠️ Successfully generated EPUB. Resend API missing in .env, skipping delivery.",
                 author: safeAuthor,
+                title: epubTitle,
                 textPreview: text.substring(0, 100) + "..."
             });
         }
@@ -204,11 +241,11 @@ export async function POST(request: Request) {
             body: JSON.stringify({
                 from: "X-to-Kindle <kindle@yegorgolovnia.com>",
                 to: [kindleEmail],
-                subject: `X Article from ${safeAuthor}`,
+                subject: `X Article: ${epubTitle}`,
                 html: "<p>Your requested X Article</p>",
                 attachments: [
                     {
-                        filename: `Article_by_${safeAuthor.replace(/[^a-zA-Z0-9]/g, "_")}.epub`,
+                        filename: attachmentFilename,
                         content: Buffer.from(epubBuffer).toString('base64'),
                     }
                 ]
@@ -227,6 +264,7 @@ export async function POST(request: Request) {
         return NextResponse.json({
             message: "Successfully delivered to Kindle",
             author: safeAuthor,
+            title: epubTitle,
             textPreview: text.substring(0, 100) + "..."
         });
 
