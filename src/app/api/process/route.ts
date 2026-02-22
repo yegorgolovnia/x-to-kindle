@@ -146,7 +146,7 @@ export async function POST(request: Request) {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                from: "X-to-Kindle <bot@yegorgolovnia.com>",
+                from: "X-to-Kindle <kindle@yegorgolovnia.com>",
                 to: [kindleEmail],
                 subject: `X Article from ${author}`,
                 html: "<p>Your requested X Article</p>",
