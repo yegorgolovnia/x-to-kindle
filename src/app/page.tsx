@@ -286,7 +286,19 @@ export default function Home() {
             </div>
 
             <div className="text-sm text-neutral-400 space-y-2 leading-relaxed">
-              <p>• Go to Amazon &gt; Manage Your Content & Devices &gt; Preferences</p>
+              <p>
+                • Open{" "}
+                <a
+                  href="https://www.amazon.com/hz/mycd/preferences/myx#/home/settings/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-neutral-200 underline underline-offset-2 hover:text-white transition-colors"
+                >
+                  Amazon Content & Devices Settings
+                </a>
+                .
+              </p>
+              <p>• On that page, you can find your Kindle email address or create a new one.</p>
               <p>• Add <span className="text-white">kindle@yegorgolovnia.com</span> to the Approved Personal Document E-mail List.</p>
             </div>
 
