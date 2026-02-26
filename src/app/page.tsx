@@ -327,13 +327,13 @@ export default function Home() {
                     />
                     MULTI
                   </label>
-                    <button
-                      type="button"
-                      onClick={() => setIsSettingsOpen(true)}
-                      className="text-sm text-neutral-500 hover:text-white transition-colors uppercase tracking-widest"
-                    >
-                      [CONFIG]
-                    </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsSettingsOpen(true)}
+                    className="text-sm text-neutral-500 hover:text-white transition-colors uppercase tracking-widest"
+                  >
+                    [CONFIG]
+                  </button>
                 </div>
               </div>
               {isMultiMode ? (
@@ -464,14 +464,14 @@ export default function Home() {
             </a>
           </p>
           <p>
-            github:{" "}
+            open source:{" "}
             <a
-              href="https://github.com/yegorgolovnia"
+              href="https://github.com/yegorgolovnia/x-to-kindle"
               target="_blank"
               rel="noreferrer"
               className="text-neutral-400 hover:text-white transition-colors"
             >
-              github.com/yegorgolovnia
+              github.com/yegorgolovnia/x-to-kindle
             </a>
           </p>
         </footer>
