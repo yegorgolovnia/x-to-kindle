@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { GeistPixelCircle } from "geist/font/pixel";
+import { Analytics } from '@vercel/analytics/next';
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,6 +17,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className={`${GeistPixelCircle.variable} ${GeistPixelCircle.className} font-pixel antialiased bg-black text-white selection:bg-white selection:text-black`}>
         {children}
+        <Analytics />
       </body>
     </html>
   );
