@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@sparticuz/chromium": "^143.0.4",
+    "@vercel/analytics": "^1.6.1",
     "cheerio": "^1.2.0",
     "epub-gen-memory": "^1.1.2",
     "geist": "^1.7.0",
