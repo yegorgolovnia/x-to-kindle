@@ -147,9 +147,9 @@ export async function POST(request: Request) {
             );
         }
 
-        const { text, author, articleTitle, debugHtml } = await page.evaluate(() => {
+        const { text, htmlContent, author, articleTitle, debugHtml } = await page.evaluate(() => {
             const articles = Array.from(document.querySelectorAll('article'));
-            if (!articles.length) return { text: null, author: null, articleTitle: null, debugHtml: null };
+            if (!articles.length) return { text: null, htmlContent: null, author: null, articleTitle: null, debugHtml: null };
 
             const mainArticle = articles[0];
             const titleCandidates = [
@@ -162,28 +162,95 @@ export async function POST(request: Request) {
                 .map((node) => node?.textContent?.trim() || "")
                 .find((candidate) => candidate.length > 0) || null;
 
-            // X Articles use different data-testids or deeply nested spans compared to normal tweets.
-            // Let's grab every text-containing node that is buried deep in the tree and isn't UI fluff.
+            const blocks: string[] = [];
+            const textBlocks: string[] = [];
 
-            // Try specific content wrappers first (varies wildly on X)
-            let possibleNodes = Array.from(mainArticle.querySelectorAll('[data-testid="article-content"], [data-testid="tweetText"]'));
-
-            // If we didn't find the explicit wrappers, cast a wider net
-            if (possibleNodes.length === 0) {
-                possibleNodes = Array.from(mainArticle.querySelectorAll('span'));
+            if (extractedTitle) {
+                const escapedTitle = extractedTitle.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                blocks.push(`<h2>${escapedTitle}</h2>`);
             }
 
-            const textBlocks = possibleNodes
-                .map(node => (node as HTMLElement).innerText?.trim() || '')
-                .filter(t => t.length > 20); // Arbitrary length filter to drop short UI strings (dates, counts, handles)
+            const walker = document.createTreeWalker(mainArticle, NodeFilter.SHOW_ELEMENT, {
+                acceptNode: function (node) {
+                    const elem = node as HTMLElement;
+                    if (elem.tagName === 'IMG') {
+                        const img = node as HTMLImageElement;
+                        if (img.src.includes('pbs.twimg.com/media/') || img.src.includes('pbs.twimg.com/card_img/')) {
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                    }
+                    if (elem.getAttribute('data-testid') === 'tweetText' || elem.getAttribute('data-testid') === 'article-content') {
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                    return NodeFilter.FILTER_SKIP;
+                }
+            });
 
-            // Deduplicate blocks (X's DOM often renders the same text multiple times in hidden nested elements)
-            const uniqueBlocks = Array.from(new Set(textBlocks));
+            let currentNode = walker.nextNode() as HTMLElement;
+            const seenText = new Set<string>();
+            const seenImg = new Set<string>();
 
-            const fullText = uniqueBlocks.join('\n\n');
+            while (currentNode) {
+                if (currentNode.tagName === 'IMG') {
+                    const img = currentNode as HTMLImageElement;
+                    if (!seenImg.has(img.src)) {
+                        seenImg.add(img.src);
+                        const largeSrc = img.src.replace(/name=[^&]+/, "name=large");
+                        blocks.push(`<p><img src="${largeSrc}" style="max-width:100%; height:auto;" /></p>`);
+                    }
+                } else {
+                    const extractedText = currentNode.innerText?.trim() || "";
+                    if (extractedText && !seenText.has(extractedText)) {
+                        seenText.add(extractedText);
+                        textBlocks.push(extractedText);
+                        const escaped = extractedText.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                        const paragraphs = escaped.split('\\n\\n').map(p => p.trim()).filter(Boolean);
+                        paragraphs.forEach(p => {
+                            blocks.push(`<p>${p.replace(/\\n/g, "<br/>")}</p>`);
+                        });
+                    }
+                }
+                currentNode = walker.nextNode() as HTMLElement;
+            }
+
+            if (blocks.length <= (extractedTitle ? 1 : 0)) {
+                const fallbackWalker = document.createTreeWalker(mainArticle, NodeFilter.SHOW_ELEMENT, {
+                    acceptNode: function (node) {
+                        const elem = node as HTMLElement;
+                        if (elem.tagName === 'IMG') {
+                            const img = node as HTMLImageElement;
+                            if (img.src.includes('pbs.twimg.com/media/')) return NodeFilter.FILTER_ACCEPT;
+                        }
+                        if (elem.tagName === 'SPAN') return NodeFilter.FILTER_ACCEPT;
+                        return NodeFilter.FILTER_SKIP;
+                    }
+                });
+
+                let fbNode = fallbackWalker.nextNode() as HTMLElement;
+                while (fbNode) {
+                    if (fbNode.tagName === 'IMG') {
+                        const imgFb = fbNode as HTMLImageElement;
+                        if (!seenImg.has(imgFb.src)) {
+                            seenImg.add(imgFb.src);
+                            const largeSrc = imgFb.src.replace(/name=[^&]+/, "name=large");
+                            blocks.push(`<p><img src="${largeSrc}" style="max-width:100%; height:auto;" /></p>`);
+                        }
+                    } else {
+                        const text = fbNode.innerText?.trim() || "";
+                        if (text.length > 20 && !seenText.has(text)) {
+                            seenText.add(text);
+                            textBlocks.push(text);
+                            const escapedFb = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                            blocks.push(`<p>${escapedFb}</p>`);
+                        }
+                    }
+                    fbNode = fallbackWalker.nextNode() as HTMLElement;
+                }
+            }
 
             return {
-                text: fullText,
+                text: textBlocks.join('\\n\\n'),
+                htmlContent: blocks.join('\\n'),
                 author: mainArticle.querySelector('[data-testid="User-Name"]')?.textContent?.split('@')[0] || "Unknown Author",
                 articleTitle: extractedTitle,
                 debugHtml: mainArticle.innerHTML
@@ -208,7 +275,7 @@ export async function POST(request: Request) {
 
         const epubContent = [{
             title: epubTitle,
-            content: `<p>${escapedText.replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br/>")}</p>`
+            content: htmlContent || `<p>${escapedText.replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br/>")}</p>`
         }];
 
         const epubBuffer = await Epub(

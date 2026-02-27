@@ -13,15 +13,15 @@
 - [ ] Implement UI states: Idle, Loading (fetching/generating/sending), Success, Error.
 
 ## Phase 3: Extraction API (Backend)
-- [ ] Create `POST /api/process` standard route.
-- [ ] Implement URL parsing to safely extract the tweet/article ID.
-- [ ] Fetch the data using a reliable open endpoint (e.g., `api.vxtwitter.com` or similar) to bypass auth walls.
-- [ ] Handle missing content / private account errors gracefully.
+- [x] Create `POST /api/process` standard route.
+- [x] Implement URL parsing to safely extract the tweet/article ID.
+- [x] Launch Puppeteer to bypass auth walls, render the X page, and extract headers, text, and images via DOM tree walker.
+- [x] Handle missing content / private account errors gracefully.
 
 ## Phase 4: EPUB Generation (Backend)
-- [ ] Map the fetched text and image URLs into clean HTML suitable for an EPUB.
-- [ ] Stream or buffer the HTML into the EPUB generation library.
-- [ ] Output a raw Buffer or Base64 string of the `.epub` file directly in memory.
+- [x] Map the fetched text and image URLs into clean HTML suitable for an EPUB.
+- [x] Stream or buffer the HTML into the EPUB generation library.
+- [x] Output a raw Buffer or Base64 string of the `.epub` file directly in memory.
 
 ## Phase 5: Resend Delivery (Backend)
 - [ ] Set up the `RESEND_API_KEY` environment variable.

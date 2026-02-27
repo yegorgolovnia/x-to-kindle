@@ -15,7 +15,7 @@
 
 ## 3. Processing (Backend API)
 *State: Frontend shows a sleek, minimal loading indicator.*
-1. **Extraction**: The Next.js API route takes the URL/ID and fetches the raw text and image data using a free proxy/scraper endpoint (e.g., vxtwitter, API equivalents).
+1. **Extraction**: The Next.js API route takes the URL/ID, launches a headless Puppeteer browser instance, directly visits the specified X URL, and deeply parses the DOM tree to faithfully extract text, headers, and media.
 2. **Conversion**: The backend parses the text and images and generates an `EPUB` file entirely in-memory.
 3. **Delivery**: The backend uses the Resend API to email the generated EPUB file as an attachment to the user's `@kindle.com` address (retrieved from the frontend payload).
 
