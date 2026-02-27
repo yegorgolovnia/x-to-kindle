@@ -6,6 +6,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "X to Kindle",
   description: "Send X (Twitter) Articles directly to your Kindle.",
+  icons: {
+    icon: "/icon.svg?v=2",
+  },
 };
 
 export default function RootLayout({
