@@ -153,6 +153,7 @@ export async function POST(request: Request) {
 
             const mainArticle = articles[0];
             const titleCandidates = [
+                mainArticle.querySelector('[data-testid="twitter-article-title"]'),
                 mainArticle.querySelector('[data-testid="articleTitle"]'),
                 mainArticle.querySelector('h1'),
                 mainArticle.querySelector('header h1'),
@@ -179,7 +180,8 @@ export async function POST(request: Request) {
                             return NodeFilter.FILTER_ACCEPT;
                         }
                     }
-                    if (elem.getAttribute('data-testid') === 'tweetText' || elem.getAttribute('data-testid') === 'article-content') {
+                    const testId = elem.getAttribute('data-testid');
+                    if (testId === 'tweetText' || testId === 'article-content' || testId === 'twitterArticleRichTextView') {
                         return NodeFilter.FILTER_ACCEPT;
                     }
                     return NodeFilter.FILTER_SKIP;
@@ -204,9 +206,9 @@ export async function POST(request: Request) {
                         seenText.add(extractedText);
                         textBlocks.push(extractedText);
                         const escaped = extractedText.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                        const paragraphs = escaped.split('\\n\\n').map(p => p.trim()).filter(Boolean);
+                        const paragraphs = escaped.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
                         paragraphs.forEach(p => {
-                            blocks.push(`<p>${p.replace(/\\n/g, "<br/>")}</p>`);
+                            blocks.push(`<p>${p.replace(/\n/g, "<br/>")}</p>`);
                         });
                     }
                 }
@@ -249,8 +251,8 @@ export async function POST(request: Request) {
             }
 
             return {
-                text: textBlocks.join('\\n\\n'),
-                htmlContent: blocks.join('\\n'),
+                text: textBlocks.join('\n\n'),
+                htmlContent: blocks.join('\n'),
                 author: mainArticle.querySelector('[data-testid="User-Name"]')?.textContent?.split('@')[0] || "Unknown Author",
                 articleTitle: extractedTitle,
                 debugHtml: mainArticle.innerHTML
